@@ -1,0 +1,22 @@
+[project]
+name = "do-python-release"
+version = "0.1.0"
+authors = [
+  { name="Tim-Oliver Husser", email="thusser@uni-goettingen.de" },
+]
+description = "A simple tool for creating a release on GitHub or GitLab"
+readme = "README.md"
+requires-python = ">=3.11"
+licence = "MITs"
+dependencies = [
+    "pygithub>=2.6.1",
+    "python-gitlab>=6.1.0",
+    "toml>=0.10.2",
+]
+
+[project.scripts]
+do-python-release = "do_python_release:main"
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
