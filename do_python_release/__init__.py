@@ -212,8 +212,8 @@ def main():
     version.bump(args.version)
     print(f'New version: {version.version()}')
 
-    # commit it
-    shell(f'git commit -m "v{version.version()}" pyproject.toml')
+    # commit all files
+    shell(f'git commit -m "v{version.version()}" -a')
     shell(f'git push')
 
     # shortcuts
