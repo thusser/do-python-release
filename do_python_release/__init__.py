@@ -95,7 +95,7 @@ class Version:
             raise RuntimeError(f'No {self.backend} found.')
 
     def version(self):
-        return shell('poetry version').split()[1].strip()
+        return shell(f'{self.backend} version').split()[1].strip()
 
     def command(self, version: str | None) -> str:
         if version is None:
