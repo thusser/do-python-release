@@ -80,7 +80,7 @@ class Version:
     def __init__(self):
         # what package backend do we use? load pyproject.toml...
         backend = toml.load("pyproject.toml")['build-system']['build-backend']
-        if backend == "hatchling.build":
+        if backend in ["hatchling.build", "uv_build"]:
             self.backend = "uv"
         elif backend == "poetry.core.masonry.api":
             self.backend = "poetry"
