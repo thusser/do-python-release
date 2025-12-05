@@ -213,7 +213,7 @@ def main():
     print(f'New version: {version.version()}')
 
     # commit it
-    shell(f'git commit -m "v{version.version()}" pyproject.toml')
+    shell(f'git commit -m "v{version.version()}" -a')
     shell(f'git push')
 
     # shortcuts
