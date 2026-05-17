@@ -79,13 +79,12 @@ class GitLab:
 class Version:
     def __init__(self):
         # what package backend do we use? load pyproject.toml...
-        backend = toml.load("pyproject.toml")['build-system']['build-backend']
-        if backend in ["hatchling.build", "uv_build", "scikit_build_core.build"]:
+        if os.path.exists('uv.lock'):
             self.backend = "uv"
-        elif backend == "poetry.core.masonry.api":
+        elif os.path.exists('poetry.lock'):
             self.backend = "poetry"
         else:
-            raise RuntimeError("Could not determine backend from pyproject.toml.")
+            raise RuntimeError("Could not determine backend.")
         print(f'Build backend:   {self.backend}')
 
         # check, whether it is installed
