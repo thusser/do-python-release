@@ -34,7 +34,7 @@ class GitHub:
     def merge(self, title: str, body: str):
         self.pr.merge(commit_title=title, commit_message=body)
 
-    def release(self, title: str, body: str):
+    def release(self, title: str, body: str, branch: str = ""):
         print('Fetching last commit...')
         commit = self.repo.get_commits()[0]
         print(f'Commit is {commit.sha}.')
@@ -71,9 +71,9 @@ class GitLab:
             time.sleep(1)
         self.mr.merge()
 
-    def release(self, title: str, body: str):
+    def release(self, title: str, body: str, branch: str = "main"):
         print("Creating release...")
-        self.project.releases.create({'ref': 'main', 'name': title, 'tag_name': title, 'description': body})
+        self.project.releases.create({'ref': branch, 'name': title, 'tag_name': title, 'description': body})
 
 
 class Version:
@@ -116,6 +116,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', type=str, help='Version to release.')
     parser.add_argument('-t', '--token', type=str, help='GitHub access token.')
+    parser.add_argument('--no-merge', action="store_true", help='No merge, just bump version and release on current branch.')
     args = parser.parse_args()
 
     # repo owner
@@ -174,32 +175,39 @@ def main():
     # get repo
     print('Fetching repository...')
     hoster.use_repo(repo_name)
-    branches = hoster.get_branches()
-    branch_names = [b.name for b in branches]
-    if 'develop' not in branch_names:
-        print('No develop branch found.')
-        return 1
-    main_branch = 'main'
-    if main_branch not in branch_names:
-        main_branch = 'master'
-        if main_branch not in branch_names:
-            print('No main/master branch found.')
-            return 1
-
-    # currently in develop?
     cur_branch = shell('git rev-parse --abbrev-ref HEAD')
-    if cur_branch != 'develop':
-        print('Current branch is not develop.')
-        return 1
+    if not args.no_merge:
+        print('Fetching repository...')
+        hoster.use_repo(repo_name)
+        branches = hoster.get_branches()
+        branch_names = [b.name for b in branches]
+        if 'develop' not in branch_names:
+            print('No develop branch found.')
+            return 1
+        main_branch = 'main'
+        if main_branch not in branch_names:
+            main_branch = 'master'
+            if main_branch not in branch_names:
+                print('No main/master branch found.')
+                return 1
+
+        # currently in develop?
+        if cur_branch != 'develop':
+            print('Current branch is not develop.')
+            return 1
 
     # print plan
     print()
     print('Will perform the following tasks:')
     print(f'1. Set new version using "{version.command(args.version)}"')
     print(f'2. Commit and pull change.')
-    print(f'3. Create PR develop -> {main_branch}')
-    print(f'4. Merge PR')
-    print(f'5. Create tag and release with new version')
+    if not args.no_merge:
+        print(f'3. Create PR develop -> {main_branch}')
+        print(f'4. Merge PR')
+        print(f'5. Create tag and release with new version')
+    else:
+        print(f'3. Create tag and release with new version')
+
 
     # continue
     if input('Continue [y/N]') not in 'yY':
@@ -219,16 +227,17 @@ def main():
     title = f'v{version.version()}'
     body = f'version {version.version()}'
 
-    # create PR
-    print('Creating PR...')
-    hoster.create_pull(title=title, body=body, src='develop', dest=main_branch)
+    if not args.no_merge:
+        # create PR
+        print('Creating PR...')
+        hoster.create_pull(title=title, body=body, src='develop', dest=main_branch)
 
-    # merge PR
-    print('Merging PR...')
-    hoster.merge(title=title, body=body)
+        # merge PR
+        print('Merging PR...')
+        hoster.merge(title=title, body=body)
 
     # get last commit and release
-    hoster.release(title=title, body=body)
+    hoster.release(title=title, body=body, branch=cur_branch)
     print('Done.')
 
 
