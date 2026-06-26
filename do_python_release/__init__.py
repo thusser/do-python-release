@@ -34,9 +34,9 @@ class GitHub:
     def merge(self, title: str, body: str):
         self.pr.merge(commit_title=title, commit_message=body)
 
-    def release(self, title: str, body: str, branch: str = ""):
+    def release(self, title: str, body: str, branch: str = "main"):
         print('Fetching last commit...')
-        commit = self.repo.get_commits()[0]
+        commit = self.repo.get_commits(sha=branch)[0]
         print(f'Commit is {commit.sha}.')
 
         # tag & release
@@ -227,7 +227,10 @@ def main():
     title = f'v{version.version()}'
     body = f'version {version.version()}'
 
-    if not args.no_merge:
+    if args.no_merge:
+        # get last commit and release
+        hoster.release(title=title, body=body, branch=cur_branch)
+    else:
         # create PR
         print('Creating PR...')
         hoster.create_pull(title=title, body=body, src='develop', dest=main_branch)
@@ -236,8 +239,9 @@ def main():
         print('Merging PR...')
         hoster.merge(title=title, body=body)
 
-    # get last commit and release
-    hoster.release(title=title, body=body, branch=cur_branch)
+        # get last commit and release
+        hoster.release(title=title, body=body, branch=main_branch)
+
     print('Done.')
 
 
