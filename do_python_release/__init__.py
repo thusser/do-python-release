@@ -139,6 +139,8 @@ def main():
     if m is not None:
         repo_name = m.group(1)
         hoster = GitLab()
+    if repo_name.startswith("/"):
+        repo_name = repo_name[1:]
 
     # access token
     token = args.token
