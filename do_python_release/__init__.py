@@ -116,6 +116,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', type=str, help='Version to release.')
     parser.add_argument('-t', '--token', type=str, help='GitHub access token.')
+    parser.add_argument('-y', '--yes', action="store_true", help='Auto-accept all questions.')
     parser.add_argument('--no-merge', action="store_true", help='No merge, just bump version and release on current branch.')
     args = parser.parse_args()
 
@@ -212,8 +213,9 @@ def main():
 
 
     # continue
-    if input('Continue [y/N]') not in 'yY':
-        return 0
+    if not args.yes:
+        if input('Continue [y/N]') not in 'yY':
+            return 0
 
     # set new version
     print()
