@@ -71,7 +71,7 @@ Provide a token either via `--token` or an environment variable:
 
 | Flag              | Description                                                              |
 |-------------------|---------------------------------------------------------------------------|
-| `-v`, `--version` | Version bump to apply (e.g. `patch`, `minor`, `major`). Defaults to `patch`. |
+| `-v`, `--version` | Version bump to apply (e.g. `patch`, `minor`, `major`). Defaults to `patch`, unless the current version is a pre-release, in which case it defaults to continuing that pre-release track (e.g. `1.2.3a1` → `1.2.3a2`). |
 | `-t`, `--token`   | Access token for GitHub/GitLab. Falls back to the environment variables above. |
 | `-y`, `--yes`     | Auto-accept all confirmation prompts.                                    |
 | `--no-merge`      | Skip the `develop` → `main` PR/merge step; bump, commit, and release directly on the current branch. |

@@ -99,9 +99,30 @@ class Version:
     def version(self):
         return shell(f'{self.backend} version').split()[1].strip()
 
+    def default_bump_type(self) -> str:
+        # if we're currently on a pre-release, default to continuing that
+        # pre-release track instead of jumping straight to a full release
+        try:
+            v = PackagingVersion(self.version())
+        except InvalidVersion:
+            return "patch"
+
+        if not v.is_prerelease:
+            return "patch"
+
+        if self.backend == "poetry":
+            return "prerelease"
+
+        # uv has no generic "prerelease" bump type; continue the same segment
+        if v.pre is not None:
+            return {"a": "alpha", "b": "beta", "rc": "rc"}[v.pre[0]]
+        if v.dev is not None:
+            return "dev"
+        return "patch"
+
     def command(self, version: str | None) -> str:
         if version is None:
-            version = "patch"
+            version = self.default_bump_type()
 
         if self.backend == "uv":
             return f"uv version --bump {version}"
@@ -114,7 +135,7 @@ class Version:
         shell(self.command(version))
 
 
-PRERELEASE_BUMP_TYPES = {'premajor', 'preminor', 'prepatch', 'prerelease'}
+PRERELEASE_BUMP_TYPES = {'premajor', 'preminor', 'prepatch', 'prerelease', 'alpha', 'beta', 'rc', 'dev'}
 
 
 def bump_leaves_prerelease(current_version: str, requested: str | None) -> bool:
@@ -241,7 +262,7 @@ def main():
         print(f'3. Create tag and release with new version')
 
     # warn if this bump would turn a pre-release into a full release
-    if bump_leaves_prerelease(version.version(), args.version):
+    if bump_leaves_prerelease(version.version(), args.version or version.default_bump_type()):
         print()
         print(f'Warning: current version {version.version()} is a pre-release, '
               f'and this bump will publish a full release.')
