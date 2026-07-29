@@ -9,6 +9,7 @@ import github
 import gitlab
 import os
 import toml
+from packaging.version import InvalidVersion, Version as PackagingVersion
 
 
 class GitHub:
@@ -113,6 +114,28 @@ class Version:
         shell(self.command(version))
 
 
+PRERELEASE_BUMP_TYPES = {'premajor', 'preminor', 'prepatch', 'prerelease'}
+
+
+def bump_leaves_prerelease(current_version: str, requested: str | None) -> bool:
+    # whether bumping from current_version with the given bump type/version
+    # would move from a pre-release to a full release
+    try:
+        if not PackagingVersion(current_version).is_prerelease:
+            return False
+    except InvalidVersion:
+        return False
+
+    bump_type = requested or "patch"
+    if bump_type in PRERELEASE_BUMP_TYPES:
+        return False
+    try:
+        return not PackagingVersion(bump_type).is_prerelease
+    except InvalidVersion:
+        # a bump keyword (major/minor/patch/...) drops any pre-release suffix
+        return True
+
+
 def main():
     # set up parser
     parser = argparse.ArgumentParser()
@@ -134,14 +157,18 @@ def main():
 
     # github or gitlab?
     hoster = None
-    m = re.search(r'github\.com[:/](.*)\.git$', repo_remote)
+    repo_name = None
+    m = re.search(r'github\.com[:/](.*?)(\.git)?$', repo_remote)
     if m is not None:
         repo_name = m.group(1)
         hoster = GitHub()
-    m = re.search(r'git@gitlab\.gwdg\.de[:/](.*)\.git$', repo_remote)
+    m = re.search(r'git@gitlab\.gwdg\.de[:/](.*?)(\.git)?$', repo_remote)
     if m is not None:
         repo_name = m.group(1)
         hoster = GitLab()
+    if hoster is None:
+        print('Unsupported remote (not GitHub or GitLab).')
+        return 1
     if repo_name.startswith("/"):
         repo_name = repo_name[1:]
 
@@ -213,6 +240,13 @@ def main():
     else:
         print(f'3. Create tag and release with new version')
 
+    # warn if this bump would turn a pre-release into a full release
+    if bump_leaves_prerelease(version.version(), args.version):
+        print()
+        print(f'Warning: current version {version.version()} is a pre-release, '
+              f'and this bump will publish a full release.')
+        if not args.yes and input('Continue [y/N]') not in 'yY':
+            return 0
 
     # continue
     if not args.yes:
