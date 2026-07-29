@@ -81,8 +81,10 @@ class Version:
         # what package backend do we use? load pyproject.toml...
         if os.path.exists('uv.lock'):
             self.backend = "uv"
+            self.lock_file = "uv.lock"
         elif os.path.exists('poetry.lock'):
             self.backend = "poetry"
+            self.lock_file = "poetry.lock"
         else:
             raise RuntimeError("Could not determine backend.")
         print(f'Build backend:   {self.backend}')
@@ -217,6 +219,19 @@ def main():
         if input('Continue [y/N]') not in 'yY':
             return 0
 
+    # detect any other uncommitted changes, so we don't sweep them into the release commit
+    dirty_files = [
+        line[3:] for line in shell('git status --porcelain').splitlines()
+        if not line.startswith('??') and line[3:] not in ('pyproject.toml', version.lock_file)
+    ]
+    if dirty_files:
+        print()
+        print('Other uncommitted changes found:')
+        for f in dirty_files:
+            print(f'  {f}')
+        if args.yes or input('Include them in the release commit? [y/N]') not in 'yY':
+            dirty_files = []
+
     # set new version
     print()
     print('Setting new version...')
@@ -224,7 +239,8 @@ def main():
     print(f'New version: {version.version()}')
 
     # commit it
-    shell(f'git commit -m "v{version.version()}" -a')
+    shell(f'git add pyproject.toml {version.lock_file} {" ".join(dirty_files)}')
+    shell(f'git commit -m "v{version.version()}"')
     shell(f'git push')
 
     # shortcuts
