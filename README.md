@@ -8,7 +8,8 @@ and creates a tag/release with the new version.
 
 1. Bumps the version in `pyproject.toml` using `uv version --bump` or `poetry version`
    (whichever backend it detects via `uv.lock` / `poetry.lock`).
-2. Commits the change (`vX.Y.Z`) and pushes it.
+2. Commits the change (`vX.Y.Z`) and pushes it. Only `pyproject.toml` and the lock file are
+   staged; any other uncommitted changes are left alone unless you opt in when prompted.
 3. Unless `--no-merge` is passed:
    - Creates a pull/merge request from `develop` into `main` (or `master`).
    - Merges it.
@@ -55,7 +56,9 @@ Run from the root of your project (where `pyproject.toml` lives):
 do-python-release
 ```
 
-You'll be shown a plan of what will happen and asked to confirm before anything is changed.
+You'll be shown a plan of what will happen and asked to confirm before anything is changed. If
+there are other uncommitted changes, or the current version is a pre-release and the bump would
+publish a full release, you'll get an extra warning and confirmation prompt for that.
 
 ### Access tokens
 
@@ -70,7 +73,7 @@ Provide a token either via `--token` or an environment variable:
 |-------------------|---------------------------------------------------------------------------|
 | `-v`, `--version` | Version bump to apply (e.g. `patch`, `minor`, `major`). Defaults to `patch`. |
 | `-t`, `--token`   | Access token for GitHub/GitLab. Falls back to the environment variables above. |
-| `-y`, `--yes`     | Auto-accept the confirmation prompt.                                    |
+| `-y`, `--yes`     | Auto-accept all confirmation prompts.                                    |
 | `--no-merge`      | Skip the `develop` → `main` PR/merge step; bump, commit, and release directly on the current branch. |
 
 ### Examples
@@ -92,6 +95,8 @@ do-python-release --no-merge -y
 - Without `--no-merge`, the tool requires a `develop` branch and a `main` or `master` branch to
   exist on the remote, and expects to be run from `develop`.
 - The release title and body are both derived from the new version, e.g. `v1.2.3`.
+- The `origin` remote must point to GitHub or `gitlab.gwdg.de`; anything else is rejected with an
+  error before any changes are made.
 
 ## License
 
