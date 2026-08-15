@@ -157,6 +157,15 @@ def bump_leaves_prerelease(current_version: str, requested: str | None) -> bool:
         return True
 
 
+def porcelain_paths(line):
+    # `git status --porcelain` v1 lines look like "XY path"; rename/copy
+    # entries look like "XY old -> new", in which case both paths matter.
+    path = line[3:]
+    if ' -> ' in path:
+        return path.split(' -> ')
+    return [path]
+
+
 def main():
     # set up parser
     parser = argparse.ArgumentParser()
@@ -276,8 +285,11 @@ def main():
 
     # detect any other uncommitted changes, so we don't sweep them into the release commit
     dirty_files = [
-        line[3:] for line in shell('git status --porcelain').splitlines()
-        if not line.startswith('??') and line[3:] not in ('pyproject.toml', version.lock_file)
+        path
+        for line in shell('git status --porcelain').splitlines()
+        if line and not line.startswith('??')
+        for path in porcelain_paths(line)
+        if path not in ('pyproject.toml', version.lock_file)
     ]
     if dirty_files:
         print()
@@ -322,7 +334,7 @@ def main():
 
 def shell(cmd, check=True):
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, check=check)
-    return result.stdout.decode('utf-8').strip()
+    return result.stdout.decode('utf-8').rstrip()
 
 
 if __name__ == '__main__':
