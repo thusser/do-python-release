@@ -172,6 +172,7 @@ def main():
     parser.add_argument('-v', '--version', type=str, help='Version to release.')
     parser.add_argument('-t', '--token', type=str, help='GitHub access token.')
     parser.add_argument('-y', '--yes', action="store_true", help='Auto-accept all questions.')
+    parser.add_argument('--include-dirty', action="store_true", help='Include other uncommitted changes in the release commit (needed to force this non-interactively with -y).')
     parser.add_argument('--no-merge', action="store_true", help='No merge, just bump version and release on current branch.')
     args = parser.parse_args()
 
@@ -296,7 +297,7 @@ def main():
         print('Other uncommitted changes found:')
         for f in dirty_files:
             print(f'  {f}')
-        if args.yes or input('Include them in the release commit? [y/N]') not in 'yY':
+        if not args.include_dirty and (args.yes or input('Include them in the release commit? [y/N]') not in 'yY'):
             dirty_files = []
 
     # set new version
