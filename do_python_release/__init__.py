@@ -125,7 +125,11 @@ class Version:
             version = self.default_bump_type()
 
         if self.backend == "uv":
-            return f"uv version --bump {version}"
+            # uv only accepts --bump for keyword bump types; an explicit
+            # version string must be passed positionally instead
+            if version in BUMP_TYPES:
+                return f"uv version --bump {version}"
+            return f"uv version {version}"
         elif self.backend == "poetry":
             return f"poetry version {version}"
         else:
@@ -136,6 +140,7 @@ class Version:
 
 
 PRERELEASE_BUMP_TYPES = {'premajor', 'preminor', 'prepatch', 'prerelease', 'alpha', 'beta', 'rc', 'dev'}
+BUMP_TYPES = {'major', 'minor', 'patch'} | PRERELEASE_BUMP_TYPES
 
 
 def bump_leaves_prerelease(current_version: str, requested: str | None) -> bool:
