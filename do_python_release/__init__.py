@@ -273,6 +273,7 @@ def main():
         print(f'3. Create PR develop -> {main_branch}')
         print(f'4. Merge PR')
         print(f'5. Create tag and release with new version')
+        print(f'6. Merge {main_branch} back into develop')
     else:
         print(f'3. Create tag and release with new version')
 
@@ -334,6 +335,14 @@ def main():
 
         # get last commit and release
         hoster.release(title=title, body=body, branch=main_branch)
+
+        # merge the release commit back into develop, so it doesn't drift
+        # from main/master release after release
+        print(f'Merging {main_branch} back into develop...')
+        back_title = f'Merge {main_branch} back into develop after {title}'
+        back_body = f'Sync develop with {title}.'
+        hoster.create_pull(title=back_title, body=back_body, src=main_branch, dest='develop')
+        hoster.merge(title=back_title, body=back_body)
 
     print('Done.')
 
