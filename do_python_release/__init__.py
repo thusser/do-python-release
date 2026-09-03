@@ -273,7 +273,7 @@ def main():
         print(f'3. Create PR develop -> {main_branch}')
         print(f'4. Merge PR')
         print(f'5. Create tag and release with new version')
-        print(f'6. Merge {main_branch} back into develop')
+        print(f'6. Merge {main_branch} back into develop (local merge + push)')
     else:
         print(f'3. Create tag and release with new version')
 
@@ -336,13 +336,22 @@ def main():
         # get last commit and release
         hoster.release(title=title, body=body, branch=main_branch)
 
-        # merge the release commit back into develop, so it doesn't drift
-        # from main/master release after release
+        # merge the release commit back into develop directly, so it doesn't drift
+        # from main/master after release. Not a PR: develop's required status
+        # checks (CI) can't pass on a PR merged the instant it's opened, so the
+        # API-based create_pull()+merge() used above for develop->main silently
+        # never completes here. This content already passed CI once as part of
+        # the develop->main release PR, so a local merge+push is both simpler
+        # and actually works.
         print(f'Merging {main_branch} back into develop...')
-        back_title = f'Merge {main_branch} back into develop after {title}'
-        back_body = f'Sync develop with {title}.'
-        hoster.create_pull(title=back_title, body=back_body, src=main_branch, dest='develop')
-        hoster.merge(title=back_title, body=back_body)
+        shell(f'git fetch origin {main_branch}')
+        try:
+            shell(f'git merge origin/{main_branch} --no-edit')
+        except subprocess.CalledProcessError:
+            shell('git merge --abort', check=False)
+            print(f'Could not merge {main_branch} back into develop automatically (conflict) -- resolve manually.')
+        else:
+            shell('git push')
 
     print('Done.')
 
