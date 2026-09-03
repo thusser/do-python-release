@@ -171,6 +171,57 @@ def porcelain_paths(line):
     return [path]
 
 
+def sync_with_remote() -> bool:
+    """Synchronize the current branch with its remote upstream.
+
+    A plain ``git push`` is rejected as non-fast-forward whenever the local
+    branch is behind its remote counterpart, which aborts the release and
+    leaves the version-bump commit behind unpushed. Pull with rebase so any
+    local commits are replayed on top of the remote ones and the following
+    push can fast-forward.
+
+    Only acts when the current branch actually has an upstream and no tracked
+    files are modified or staged; otherwise nothing is touched and True is
+    returned, so the push behaves exactly as before. Returns False only when
+    the sync could not be completed automatically (e.g. a rebase conflict),
+    in which case the branch is left in its original state.
+    """
+    # current branch without a remote upstream? nothing to sync against
+    if not shell('git rev-parse --abbrev-ref @{u} 2>/dev/null', check=False):
+        return True
+    # a rebase refuses to run with modified or staged files; never stash or
+    # touch the user's uncommitted changes, so skip the sync in that case
+    if any(line and not line.startswith('??')
+           for line in shell('git status --porcelain').splitlines()):
+        return True
+    print('Syncing with remote...')
+    try:
+        shell('git pull --rebase')
+    except subprocess.CalledProcessError:
+        shell('git rebase --abort', check=False)
+        print('Could not sync with the remote automatically (rebase failed).')
+        print('Resolve manually, e.g. with "git pull --rebase", then re-run this tool.')
+        return False
+    return True
+
+
+def push_with_retry() -> None:
+    """Push the current branch, re-syncing once if the push is rejected.
+
+    Even after an initial sync, the remote can advance between that sync and
+    the push, in which case the push is rejected as non-fast-forward. Sync
+    again and retry once; if the retry fails, the original error propagates.
+    """
+    try:
+        shell('git push')
+    except subprocess.CalledProcessError:
+        print('Push rejected (branch may be behind), syncing with the remote and retrying...')
+        if sync_with_remote():
+            shell('git push')
+        else:
+            raise
+
+
 def main():
     # set up parser
     parser = argparse.ArgumentParser()
@@ -268,7 +319,7 @@ def main():
     print()
     print('Will perform the following tasks:')
     print(f'1. Set new version using "{version.command(args.version)}"')
-    print(f'2. Commit and pull change.')
+    print(f'2. Sync with remote, commit and push change.')
     if not args.no_merge:
         print(f'3. Create PR develop -> {main_branch}')
         print(f'4. Merge PR')
@@ -306,6 +357,11 @@ def main():
         if not args.include_dirty and (args.yes or input('Include them in the release commit? [y/N]') not in 'yY'):
             dirty_files = []
 
+    # make sure we are not committing on top of a stale branch: the push
+    # below would otherwise be rejected as non-fast-forward
+    if not sync_with_remote():
+        return 1
+
     # set new version
     print()
     print('Setting new version...')
@@ -315,7 +371,7 @@ def main():
     # commit it
     shell(f'git add pyproject.toml {version.lock_file} {" ".join(dirty_files)}')
     shell(f'git commit -m "v{version.version()}"')
-    shell(f'git push')
+    push_with_retry()
 
     # shortcuts
     title = f'v{version.version()}'
@@ -351,7 +407,7 @@ def main():
             shell('git merge --abort', check=False)
             print(f'Could not merge {main_branch} back into develop automatically (conflict) -- resolve manually.')
         else:
-            shell('git push')
+            push_with_retry()
 
     print('Done.')
 
