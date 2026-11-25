@@ -56,7 +56,9 @@ Run from the root of your project (where `pyproject.toml` lives):
 do-python-release
 ```
 
-You'll be shown a plan of what will happen and asked to confirm before anything is changed. If
+The version bump is checked with a dry run first, so the plan shows the actual new version, and a
+bump the backend would refuse stops with an error before anything is changed. You'll be shown a
+plan of what will happen and asked to confirm before anything is changed. If
 there are other uncommitted changes, or the current version is a pre-release and the bump would
 publish a full release, you'll get an extra warning and confirmation prompt for that.
 
@@ -71,7 +73,7 @@ Provide a token either via `--token` or an environment variable:
 
 | Flag              | Description                                                              |
 |-------------------|---------------------------------------------------------------------------|
-| `-v`, `--version` | Version bump to apply (e.g. `patch`, `minor`, `major`). Defaults to `patch`, unless the current version is a pre-release, in which case it defaults to continuing that pre-release track (e.g. `1.2.3a1` → `1.2.3a2`). |
+| `-v`, `--version` | Version bump to apply (e.g. `patch`, `minor`, `major`, `dev`, `rc`), an explicit version (e.g. `1.3.0.dev1`), or with uv a comma-separated list of bumps (e.g. `minor,dev`). Defaults to `patch`, unless the current version is a pre-release, in which case it defaults to continuing that pre-release track (e.g. `1.2.3a1` → `1.2.3a2`). See below for pre-releases. |
 | `-t`, `--token`   | Access token for GitHub/GitLab. Falls back to the environment variables above. |
 | `-y`, `--yes`     | Auto-accept all confirmation prompts.                                    |
 | `--no-merge`      | Skip the `develop` → `main` PR/merge step; bump, commit, and release directly on the current branch. |
@@ -88,6 +90,21 @@ Release from the current branch without merging:
 
 ```bash
 do-python-release --no-merge -y
+```
+
+### Pre-releases
+
+With uv, `dev`, `alpha`, `beta` and `rc` on a stable version also bump the patch level
+(`1.2.3` → `1.2.4.dev1`), since uv refuses `1.2.3` → `1.2.3.dev1`. Use e.g. `-v minor,dev` for
+`1.3.0.dev1`. On a pre-release, `patch` releases that version (`1.2.4.dev1` → `1.2.4`) instead of
+skipping it. Poetry has no `dev`/`alpha`/`beta`/`rc` bumps; use `prepatch`, `preminor`,
+`premajor`, `prerelease` or an explicit version.
+
+A pre-release is never merged into `main`/`master`: it is always released from the current
+branch, as with `--no-merge`.
+
+```bash
+do-python-release -v minor,dev
 ```
 
 ## Notes
