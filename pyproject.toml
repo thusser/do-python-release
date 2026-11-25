@@ -1,6 +1,6 @@
 [project]
 name = "do-python-release"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
   { name="Tim-Oliver Husser", email="thusser@uni-goettingen.de" },
 ]
